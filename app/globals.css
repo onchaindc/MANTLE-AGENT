@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --black:  #080C0A;
+  --panel:  #0F1611;
+  --border: #1A2A1C;
+  --lime:   #6CFF4A;
+  --lime2:  #3DBF22;
+  --muted:  #4A6650;
+  --white:  #EEF5F0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--panel); }
+::-webkit-scrollbar-thumb { background: var(--border); }
