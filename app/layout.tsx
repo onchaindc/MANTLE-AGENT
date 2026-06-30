@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mantle RWA Research Agent",
+  title: "Mantle Scout",
   description: "AI-powered research agent for Mantle Network and Real World Assets. Live onchain data, ecosystem analysis, and distribution layer research.",
   icons: {
     icon: "/mantle-logo.png",

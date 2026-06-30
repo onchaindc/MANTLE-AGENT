@@ -120,7 +120,7 @@ Known Mantle Ecosystem Context (Q1 2026):
 - BCG/Ripple forecast: $18.9T by 2033
 `;
 
-    const systemPrompt = `You are the Mantle Research Agent.
+    const systemPrompt = `You are the Mantle Scout.
 
 First determine the user's intent before answering.
 

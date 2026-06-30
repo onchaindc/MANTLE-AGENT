@@ -155,7 +155,7 @@ export default function Home() {
 
   function shareResponse(content: string) {
     const snippet = content.slice(0, 200).trim();
-    const text = `${snippet} - via Mantle Research Agent mantlescout.vercel.app @Mantle_Official #Mantle #RWA`;
+    const text = `${snippet} - via Mantle Scout mantlescout.vercel.app @Mantle_Official #Mantle #RWA`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
@@ -175,9 +175,9 @@ export default function Home() {
       <header style={{ borderBottom: "1px solid #1A2A1C", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#080C0A", zIndex: 10, gap: "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-            <Image src="/mantle-logo.png" alt="Mantle Research Agent logo" width={32} height={32} style={{ width: "32px", height: "32px", objectFit: "cover", display: "block" }} priority />
+            <Image src="/mantle-logo.png" alt="Mantle Scout logo" width={32} height={32} style={{ width: "32px", height: "32px", objectFit: "cover", display: "block" }} priority />
           </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", letterSpacing: "3px", color: "#EEF5F0", textTransform: "uppercase" }}>Mantle Research Agent</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", letterSpacing: "3px", color: "#EEF5F0", textTransform: "uppercase" }}>Mantle Scout</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -277,7 +277,7 @@ export default function Home() {
               {messages.map((message, index) => (
                 <div key={index} ref={(element) => { messageRefs.current[index] = element; }} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "#1A2A1C" : "#080C0A", border: message.role === "user" ? "1px solid #1A2A1C" : "1px solid #6CFF4A", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "#4A6650" }}>
-                    {message.role === "user" ? "YOU" : <Image src="/mantle-logo.png" alt="Mantle Research Agent" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />}
+                    {message.role === "user" ? "YOU" : <Image src="/mantle-logo.png" alt="Mantle Scout" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     {message.role === "user" ? (
@@ -314,7 +314,7 @@ export default function Home() {
               {loading && (
                 <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#080C0A", border: "1px solid #6CFF4A", overflow: "hidden" }}>
-                    <Image src="/mantle-logo.png" alt="Mantle Research Agent" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />
+                    <Image src="/mantle-logo.png" alt="Mantle Scout" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />
                   </div>
                   <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", borderTop: "2px solid #6CFF4A", padding: "20px 28px", display: "flex", gap: "6px", alignItems: "center" }}>
                     {[0, 1, 2].map((dot) => (
