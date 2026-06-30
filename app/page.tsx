@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const SUGGESTED = [
@@ -173,8 +174,8 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: "#080C0A", display: "flex", flexDirection: "column" }}>
       <header style={{ borderBottom: "1px solid #1A2A1C", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#080C0A", zIndex: 10, gap: "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "28px", height: "28px", background: "#6CFF4A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: "14px", fontWeight: 700, color: "#080C0A", fontFamily: "var(--font-mono)" }}>M</span>
+          <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            <Image src="/mantle-logo.png" alt="Mantle Research Agent logo" width={32} height={32} style={{ width: "32px", height: "32px", objectFit: "cover", display: "block" }} priority />
           </div>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", letterSpacing: "3px", color: "#EEF5F0", textTransform: "uppercase" }}>Mantle Research Agent</span>
         </div>
@@ -275,8 +276,8 @@ export default function Home() {
             <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
               {messages.map((message, index) => (
                 <div key={index} ref={(element) => { messageRefs.current[index] = element; }} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "#1A2A1C" : "#6CFF4A", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: message.role === "user" ? "#4A6650" : "#080C0A" }}>
-                    {message.role === "user" ? "YOU" : "AI"}
+                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "#1A2A1C" : "#080C0A", border: message.role === "user" ? "1px solid #1A2A1C" : "1px solid #6CFF4A", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "#4A6650" }}>
+                    {message.role === "user" ? "YOU" : <Image src="/mantle-logo.png" alt="Mantle Research Agent" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     {message.role === "user" ? (
@@ -312,7 +313,9 @@ export default function Home() {
 
               {loading && (
                 <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#6CFF4A", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "#080C0A" }}>AI</div>
+                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#080C0A", border: "1px solid #6CFF4A", overflow: "hidden" }}>
+                    <Image src="/mantle-logo.png" alt="Mantle Research Agent" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />
+                  </div>
                   <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", borderTop: "2px solid #6CFF4A", padding: "20px 28px", display: "flex", gap: "6px", alignItems: "center" }}>
                     {[0, 1, 2].map((dot) => (
                       <div key={dot} style={{ width: "6px", height: "6px", background: "#6CFF4A", borderRadius: "50%", animation: `pulse 1.2s ease-in-out ${dot * 0.2}s infinite` }} />

@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Mantle RWA Research Agent",
   description: "AI-powered research agent for Mantle Network and Real World Assets. Live onchain data, ecosystem analysis, and distribution layer research.",
+  icons: {
+    icon: "/mantle-logo.png",
+    shortcut: "/mantle-logo.png",
+    apple: "/mantle-logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
