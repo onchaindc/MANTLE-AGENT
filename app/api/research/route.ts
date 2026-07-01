@@ -25,12 +25,12 @@ async function fetchRWAData() {
       { next: { revalidate: 300 } }
     );
     const data = await res.json();
-    return data.map((c: any) => ({
-      name: c.name,
-      symbol: c.symbol.toUpperCase(),
-      price: c.current_price,
-      marketCap: c.market_cap,
-      change24h: c.price_change_percentage_24h,
+    return data.map((coin: any) => ({
+      name: coin.name,
+      symbol: coin.symbol.toUpperCase(),
+      price: coin.current_price,
+      marketCap: coin.market_cap,
+      change24h: coin.price_change_percentage_24h,
     }));
   } catch {
     return null;
@@ -61,8 +61,8 @@ async function fetchTopDeFiLlamaChains() {
       next: { revalidate: 300 },
     });
     const data = await res.json();
-    const mantle = data.find((c: any) =>
-      c.name?.toLowerCase().includes("mantle")
+    const mantle = data.find((chain: any) =>
+      chain.name?.toLowerCase().includes("mantle")
     );
     return mantle ?? null;
   } catch {
@@ -98,8 +98,8 @@ ${
   rwaTokens
     ?.slice(0, 6)
     .map(
-      (t: any) =>
-        `- ${t.name} (${t.symbol}): $${t.price?.toFixed(4)} | MCap: $${(t.marketCap / 1e6).toFixed(1)}M | 24h: ${t.change24h?.toFixed(2)}%`
+      (token: any) =>
+        `- ${token.name} (${token.symbol}): $${token.price?.toFixed(4)} | MCap: $${(token.marketCap / 1e6).toFixed(1)}M | 24h: ${token.change24h?.toFixed(2)}%`
     )
     .join("\n") ?? "N/A"
 }
@@ -120,16 +120,31 @@ Known Mantle Ecosystem Context (Q1 2026):
 - BCG/Ripple forecast: $18.9T by 2033
 `;
 
-    const systemPrompt = `You are a specialized Mantle Network and RWA (Real World Assets) research agent. You have access to live onchain data and deep knowledge of the Mantle ecosystem, tokenized assets, DeFi protocols, and onchain finance trends.
+    const systemPrompt = `You are the Mantle Research Agent.
 
-Your job is to provide sharp, data-grounded research on:
+First determine the user's intent before answering.
+
+Intent rules:
+- If the user sends a casual greeting or small-talk message like "hi", "hello", "hey", "gm", "good morning", "how are you", or similar, reply naturally in 1-3 short sentences.
+- For casual messages, do not define RWAs, do not dump market context, and do not force Mantle analysis.
+- A casual reply should briefly say you can help with Mantle, MNT, RWAs, tokenized assets, ecosystem metrics, or onchain research.
+- If the user asks an actual research question, then switch into analyst mode and give the deeper Mantle/RWA answer.
+- If the user message is ambiguous but not a real research question, ask a short clarifying question instead of assuming they want a full report.
+
+When the query is a real research request, you provide sharp, data-grounded research on:
 1. Mantle Network ecosystem (TVL, protocols, RWA activity, MNT token)
 2. RWA market trends (tokenized equities, Treasuries, private credit)
 3. Onchain finance narratives (distribution bottlenecks, composability, agent infrastructure)
 
 ${liveContext}
 
-Always lead with the most relevant live data point for the query. Be direct, specific, and analytical. No hype. Cite numbers where available. When discussing Mantle specifically, connect ecosystem developments to the broader distribution thesis: issuance is solved, distribution is the hard problem. Format your response with clear sections using plain text headers (no markdown symbols like ** or ##). Keep responses focused and scannable.`;
+Research response rules:
+- Lead with the most relevant live data point when it helps answer the query.
+- Be direct, specific, and analytical. No hype.
+- Cite numbers where available.
+- When discussing Mantle specifically, connect ecosystem developments to the broader distribution thesis: issuance is solved, distribution is the hard problem.
+- Format research responses with clear plain-text section headers and keep them focused and scannable.
+- Do not use markdown heading symbols like ** or ## in section headers.`;
 
     const messages = [
       ...(history ?? []),
@@ -149,6 +164,8 @@ Always lead with the most relevant live data point for the query. Be direct, spe
       response,
       liveData: {
         mntPrice: mntToken?.price,
+        mntMarketCap: mntToken?.marketCap,
+        mntVolume: mntToken?.volume,
         mntChange: mntToken?.change24h,
         mantleTVL: mantleChain?.tvl ?? mantleTVL?.tvl,
         rwaTokens: rwaTokens?.slice(0, 4),
