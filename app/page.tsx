@@ -376,7 +376,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", height: isMobile ? "auto" : "100dvh", overflow: isMobile ? "visible" : "hidden", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
       <header style={{ borderBottom: "1px solid var(--line)", padding: isMobile ? "14px 16px" : "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 20, gap: isMobile ? "12px" : "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px", width: isMobile ? "100%" : "auto" }}>
           <div style={{ width: "40px", height: "40px", overflow: "hidden" }}>
