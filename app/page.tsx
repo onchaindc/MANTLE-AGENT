@@ -408,7 +408,7 @@ export default function Home() {
       </header>
 
       {showLiveStats && (
-        <div style={{ borderBottom: "1px solid var(--line)", padding: isMobile ? "10px 16px" : "14px 32px", background: "var(--panel-soft)", display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? "10px" : "12px" }}>
+        <div style={{ borderBottom: "1px solid var(--line)", padding: isMobile ? "10px 16px" : "14px 32px", background: "var(--panel-soft)", display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? "10px" : "12px", position: !isMobile ? "sticky" : "static", top: !isMobile ? "56px" : undefined, zIndex: !isMobile ? 15 : undefined }}>
           <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: isMobile ? "12px" : "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MNT PRICE</div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "16px" : "18px", color: "var(--text)", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "-"}</div>
@@ -428,9 +428,9 @@ export default function Home() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: "flex", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", width: "100%", minHeight: 0, overflow: isMobile ? "visible" : "hidden" }}>
         {showHistory && (
-          <aside style={{ width: "280px", borderRight: "1px solid var(--line)", background: "var(--panel-soft)", padding: "24px 16px", flexShrink: 0 }}>
+          <aside style={{ width: "280px", borderRight: "1px solid var(--line)", background: "var(--panel-soft)", padding: "24px 16px", flexShrink: 0, overflowY: !isMobile ? "auto" : "visible" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--lime)", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "16px" }}>
               Conversations
             </div>
@@ -464,7 +464,7 @@ export default function Home() {
           </aside>
         )}
 
-        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? (isMobile ? "12px 16px 10px" : "20px 32px 16px") : (isMobile ? "20px 16px 24px" : "32px"), display: "flex", flexDirection: "column", height: messages.length === 0 ? (isMobile ? (showLiveStats ? "calc(100dvh - 360px)" : "calc(100dvh - 172px)") : (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)")) : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
+        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? (isMobile ? "12px 16px 10px" : "20px 32px 16px") : (isMobile ? "20px 16px 24px" : "32px"), display: "flex", flexDirection: "column", height: isMobile ? (messages.length === 0 ? (showLiveStats ? "calc(100dvh - 360px)" : "calc(100dvh - 172px)") : "auto") : "100%", minHeight: 0, overflow: isMobile ? (messages.length === 0 ? "hidden" : "visible") : "auto" }}>
           {messages.length === 0 && (
             <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "8px 0" : "12px 0", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)" }}>
@@ -476,7 +476,7 @@ export default function Home() {
           )}
 
           {messages.length > 0 && (
-            <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px", minHeight: 0 }}>
               {messages.map((message, index) => (
                 <div key={`${activeConversation?.id ?? "conversation"}-${index}`} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "var(--line)" : "var(--card)", border: message.role === "user" ? "1px solid var(--line)" : "1px solid var(--lime)", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>
