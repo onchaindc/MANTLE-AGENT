@@ -3,13 +3,27 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const SUGGESTED = [
-  "What is happening with RWA on Mantle right now?",
-  "Explain the SPCXx SpaceX tokenization on Mantle",
-  "What is the distribution problem in onchain finance?",
-  "How does Mantle compare to other RWA chains?",
-  "What is the current MNT token price and ecosystem TVL?",
-  "Explain Mantle's agent infrastructure stack",
+const QUICK_ACTIONS = [
+  {
+    label: "TVL Snapshot",
+    query: "Give me a concise TVL snapshot for Mantle, including current TVL, major protocols, and what changed recently.",
+  },
+  {
+    label: "Token Lookup",
+    query: "Look up MNT and summarize price, market cap, volume, and the most relevant token context.",
+  },
+  {
+    label: "Yield Scan",
+    query: "Scan Mantle yield opportunities and explain the strongest current risk-adjusted options.",
+  },
+  {
+    label: "Protocol Compare",
+    query: "Compare the leading Mantle protocols by traction, TVL, and relevance to RWAs or onchain finance.",
+  },
+  {
+    label: "Market Pulse",
+    query: "Give me a quick market pulse for Mantle, MNT, RWAs, and onchain finance trends today.",
+  },
 ];
 
 const FOLLOW_UPS = {
@@ -245,29 +259,12 @@ export default function Home() {
 
         <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: "32px" }}>
           {messages.length === 0 && (
-            <div style={{ paddingTop: "48px" }}>
-              <h1 style={{ fontSize: "48px", lineHeight: 1, marginBottom: "18px", color: "#EEF5F0", fontWeight: 500 }}>Mantle x RWA research, with live context.</h1>
-              <p style={{ fontSize: "16px", color: "#4A6650", lineHeight: 1.6, maxWidth: "720px", marginBottom: "36px" }}>
-                Ask about Mantle, MNT, RWAs, tokenized equities, DeFi infrastructure, or distribution trends in onchain finance.
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "40px" }}>
-                {SUGGESTED.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => sendQuery(suggestion)}
-                    style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px", textAlign: "left", cursor: "pointer", color: "#4A6650", fontSize: "13px", lineHeight: 1.5, fontFamily: "var(--font-sans)", transition: "all 0.15s" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#6CFF4A";
-                      e.currentTarget.style.color = "#EEF5F0";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "#1A2A1C";
-                      e.currentTarget.style.color = "#4A6650";
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+            <div style={{ minHeight: "calc(100vh - 270px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 0 24px", textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "#EEF5F0" }}>
+                <Image src="/mantle-logo.png" alt="Mantle Scout" width={30} height={30} style={{ width: "30px", height: "30px", objectFit: "cover", display: "block", opacity: 0.9 }} priority />
+                <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "#EEF5F0", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
+                  What should we scout on Mantle?
+                </h1>
               </div>
             </div>
           )}
@@ -329,27 +326,48 @@ export default function Home() {
             </div>
           )}
 
-          <div style={{ position: "sticky", bottom: 0, background: "#080C0A", borderTop: "1px solid #1A2A1C", paddingTop: "16px", paddingBottom: "24px" }}>
-            <div style={{ display: "flex", border: "1px solid #1A2A1C", background: "#0F1611" }}>
+          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "#080C0A", borderTop: messages.length > 0 ? "1px solid #1A2A1C" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: "24px" }}>
+            <div style={{ border: "1px solid #1A2A1C", background: "#0F1611", borderRadius: "18px", padding: "10px", overflow: "hidden" }}>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendQuery(input)}
-                placeholder="Ask about Mantle, RWAs, tokenized equities, ecosystem metrics..."
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", padding: "16px 20px", color: "#EEF5F0", fontSize: "14px", fontFamily: "var(--font-sans)" }}
+                placeholder="Ask about any Mantle protocol, token, or trend"
+                style={{ width: "100%", minHeight: "58px", background: "transparent", border: "none", outline: "none", padding: "14px 14px 18px", color: "#EEF5F0", fontSize: "15px", fontFamily: "var(--font-sans)" }}
               />
-              <button
-                onClick={() => sendQuery(input)}
-                disabled={loading || !input.trim()}
-                style={{ background: loading || !input.trim() ? "#1A2A1C" : "#6CFF4A", border: "none", padding: "16px 24px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, color: loading || !input.trim() ? "#4A6650" : "#080C0A", letterSpacing: "2px", textTransform: "uppercase", transition: "all 0.15s" }}
-              >
-                {loading ? "..." : "Research"}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderTop: "1px solid #1A2A1C", paddingTop: "10px" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#2A3A2C", letterSpacing: "1.5px", textTransform: "uppercase" }}>Mantle Scout</span>
+                <button
+                  onClick={() => sendQuery(input)}
+                  disabled={loading || !input.trim()}
+                  style={{ background: loading || !input.trim() ? "#1A2A1C" : "#6CFF4A", border: "none", borderRadius: "999px", padding: "10px 16px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: loading || !input.trim() ? "#4A6650" : "#080C0A", letterSpacing: "1.5px", textTransform: "uppercase", transition: "all 0.15s" }}
+                >
+                  {loading ? "..." : "Research"}
+                </button>
+              </div>
             </div>
-            <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between", fontFamily: "var(--font-mono)", fontSize: "9px", color: "#2A3A2C", letterSpacing: "1px" }}>
-              <span>POWERED BY GROQ + LLAMA 3.3 70B</span>
-              <span>LIVE: DEFILLAMA + COINGECKO</span>
-            </div>
+            {messages.length === 0 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginTop: "14px" }}>
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action.label}
+                    onClick={() => sendQuery(action.query)}
+                    disabled={loading}
+                    style={{ background: "transparent", border: "1px solid #1A2A1C", borderRadius: "999px", color: "#4A6650", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "1px", padding: "8px 12px", textTransform: "uppercase", transition: "all 0.15s" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#6CFF4A";
+                      e.currentTarget.style.color = "#EEF5F0";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#1A2A1C";
+                      e.currentTarget.style.color = "#4A6650";
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
