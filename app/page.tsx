@@ -428,9 +428,9 @@ export default function Home() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: "flex", width: "100%" }}>
+      <div style={{ flex: 1, display: "flex", width: "100%", minHeight: 0, overflow: isMobile ? "visible" : "hidden" }}>
         {showHistory && (
-          <aside style={{ width: "280px", borderRight: "1px solid var(--line)", background: "var(--panel-soft)", padding: "24px 16px", flexShrink: 0 }}>
+          <aside style={{ width: "280px", borderRight: "1px solid var(--line)", background: "var(--panel-soft)", padding: "24px 16px", flexShrink: 0, overflow: "hidden" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--lime)", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "16px" }}>
               Conversations
             </div>
@@ -464,7 +464,7 @@ export default function Home() {
           </aside>
         )}
 
-        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? (isMobile ? "12px 16px 10px" : "20px 32px 16px") : (isMobile ? "20px 16px 24px" : "32px"), display: "flex", flexDirection: "column", height: messages.length === 0 ? (isMobile ? (showLiveStats ? "calc(100dvh - 360px)" : "calc(100dvh - 172px)") : (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)")) : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
+        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? (isMobile ? "12px 16px 10px" : "20px 32px 16px") : (isMobile ? "20px 16px 24px" : "32px"), display: "flex", flexDirection: "column", height: messages.length === 0 ? (isMobile ? (showLiveStats ? "calc(100dvh - 360px)" : "calc(100dvh - 172px)") : (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)")) : (isMobile ? "auto" : "100%"), minHeight: 0, overflow: messages.length === 0 ? "hidden" : (isMobile ? "visible" : "auto") }}>
           {messages.length === 0 && (
             <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "8px 0" : "12px 0", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)" }}>
@@ -476,7 +476,7 @@ export default function Home() {
           )}
 
           {messages.length > 0 && (
-            <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px", minHeight: 0 }}>
               {messages.map((message, index) => (
                 <div key={`${activeConversation?.id ?? "conversation"}-${index}`} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "var(--line)" : "var(--card)", border: message.role === "user" ? "1px solid var(--line)" : "1px solid var(--lime)", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>
