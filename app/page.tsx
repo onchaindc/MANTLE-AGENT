@@ -175,6 +175,7 @@ function MoonIcon() {
 export default function Home() {
   const initialConversationRef = useRef<Conversation>(createConversation());
   const [theme, setTheme] = useState<Theme>("dark");
+  const [isMobile, setIsMobile] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>(() => [initialConversationRef.current]);
   const [activeConversationId, setActiveConversationId] = useState(initialConversationRef.current.id);
   const [input, setInput] = useState("");
@@ -208,6 +209,19 @@ export default function Home() {
     if (typeof window !== "undefined" && window.innerWidth >= 1024) {
       setShowHistory(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setIsMobile(window.innerWidth <= 767);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+    };
   }, []);
 
   function selectConversation(conversationId: string) {
@@ -363,53 +377,53 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
-      <header style={{ borderBottom: "1px solid var(--line)", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 20, gap: "16px", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+      <header style={{ borderBottom: "1px solid var(--line)", padding: isMobile ? "14px 16px" : "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 20, gap: isMobile ? "12px" : "16px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", width: isMobile ? "100%" : "auto" }}>
           <div style={{ width: "40px", height: "40px", overflow: "hidden" }}>
             <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
           </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "4px", color: "var(--text)", textTransform: "uppercase" }}>Mantle Scout</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "12px" : "13px", letterSpacing: isMobile ? "3px" : "4px", color: "var(--text)", textTransform: "uppercase" }}>Mantle Scout</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button onClick={() => setShowHistory((value) => !value)} style={{ ...shellButton, borderColor: showHistory ? "var(--lime)" : "var(--line)", color: showHistory ? "var(--text)" : "var(--text-soft)" }}>
+        <div style={{ display: isMobile ? "grid" : "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end", width: isMobile ? "100%" : "auto", gridTemplateColumns: isMobile ? "repeat(3, minmax(0, 1fr))" : undefined }}>
+          <button onClick={() => setShowHistory((value) => !value)} style={{ ...shellButton, borderColor: showHistory ? "var(--lime)" : "var(--line)", color: showHistory ? "var(--text)" : "var(--text-soft)", width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : shellButton.padding, fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }}>
             History
           </button>
-          <button onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} style={{ ...shellButton, display: "flex", alignItems: "center", justifyContent: "center", minWidth: "44px", padding: "10px 14px", color: "var(--text)" }} aria-label="Toggle theme">
+          <button onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} style={{ ...shellButton, display: "flex", alignItems: "center", justifyContent: "center", minWidth: isMobile ? undefined : "44px", width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : "10px 14px", color: "var(--text)", fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }} aria-label="Toggle theme">
             {theme === "dark" ? <MoonIcon /> : <SunIcon />}
           </button>
-          <button onClick={goBack} disabled={loading || messages.length === 0} style={{ ...shellButton, opacity: loading || messages.length === 0 ? 0.45 : 1 }}>
+          <button onClick={goBack} disabled={loading || messages.length === 0} style={{ ...shellButton, opacity: loading || messages.length === 0 ? 0.45 : 1, width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : shellButton.padding, fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }}>
             Back
           </button>
-          <button onClick={startNewConversation} disabled={loading} style={{ ...shellButton, borderColor: "var(--lime)", color: "var(--text)", opacity: loading ? 0.45 : 1 }}>
+          <button onClick={startNewConversation} disabled={loading} style={{ ...shellButton, borderColor: "var(--lime)", color: "var(--text)", opacity: loading ? 0.45 : 1, width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : shellButton.padding, fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }}>
             New Chat
           </button>
-          <button onClick={goHome} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>
+          <button onClick={goHome} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1, width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : shellButton.padding, fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }}>
             Home
           </button>
-          <button onClick={() => setShowLiveStats((value) => !value)} style={{ ...shellButton, borderColor: showLiveStats ? "var(--lime)" : "var(--line)", color: showLiveStats ? "var(--text)" : "var(--text-soft)" }}>
+          <button onClick={() => setShowLiveStats((value) => !value)} style={{ ...shellButton, borderColor: showLiveStats ? "var(--lime)" : "var(--line)", color: showLiveStats ? "var(--text)" : "var(--text-soft)", width: isMobile ? "100%" : undefined, padding: isMobile ? "10px 8px" : shellButton.padding, fontSize: isMobile ? "9px" : shellButton.fontSize, letterSpacing: isMobile ? "0.8px" : shellButton.letterSpacing }}>
             Live Stats {showLiveStats ? "On" : "Off"}
           </button>
         </div>
       </header>
 
       {showLiveStats && (
-        <div style={{ borderBottom: "1px solid var(--line)", padding: "14px 32px", background: "var(--panel-soft)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+        <div style={{ borderBottom: "1px solid var(--line)", padding: isMobile ? "10px 16px" : "14px 32px", background: "var(--panel-soft)", display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isMobile ? "10px" : "12px" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: isMobile ? "12px" : "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MNT PRICE</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "-"}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "16px" : "18px", color: "var(--text)", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "-"}</div>
           </div>
-          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: isMobile ? "12px" : "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MARKET CAP</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntMarketCap)}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "16px" : "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntMarketCap)}</div>
           </div>
-          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: isMobile ? "12px" : "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>24H VOLUME</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntVolume)}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "16px" : "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntVolume)}</div>
           </div>
-          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: isMobile ? "12px" : "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MANTLE TVL</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mantleTVL)}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: isMobile ? "16px" : "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mantleTVL)}</div>
           </div>
         </div>
       )}
@@ -450,11 +464,11 @@ export default function Home() {
           </aside>
         )}
 
-        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? "20px 32px 16px" : "32px", display: "flex", flexDirection: "column", height: messages.length === 0 ? (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)") : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
+        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? (isMobile ? "12px 16px 10px" : "20px 32px 16px") : (isMobile ? "20px 16px 24px" : "32px"), display: "flex", flexDirection: "column", height: messages.length === 0 ? (isMobile ? (showLiveStats ? "calc(100dvh - 360px)" : "calc(100dvh - 172px)") : (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)")) : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
           {messages.length === 0 && (
-            <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 0", textAlign: "center" }}>
+            <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "8px 0" : "12px 0", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)" }}>
-                <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "var(--text)", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
+                <h1 style={{ fontSize: isMobile ? "28px" : "44px", lineHeight: isMobile ? 1.18 : 1.12, color: "var(--text)", fontWeight: 400, letterSpacing: 0, margin: 0, maxWidth: isMobile ? "280px" : undefined }}>
                   What should we scout on Mantle?
                 </h1>
               </div>
@@ -509,33 +523,33 @@ export default function Home() {
           )}
 
           <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: messages.length > 0 ? "24px" : "8px", marginTop: messages.length === 0 ? "auto" : "0" }}>
-            <div style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: "18px", padding: "10px", overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: "18px", padding: isMobile ? "8px" : "10px", overflow: "hidden" }}>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendQuery(input)}
                 placeholder="Ask about any Mantle protocol, token, or trend"
-                style={{ width: "100%", minHeight: "58px", background: "transparent", border: "none", outline: "none", padding: "14px 14px 18px", color: "var(--text)", fontSize: "15px", fontFamily: "var(--font-sans)" }}
+                style={{ width: "100%", minHeight: isMobile ? "50px" : "58px", background: "transparent", border: "none", outline: "none", padding: isMobile ? "12px 12px 14px" : "14px 14px 18px", color: "var(--text)", fontSize: isMobile ? "14px" : "15px", fontFamily: "var(--font-sans)" }}
               />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderTop: "1px solid var(--line)", paddingTop: "10px" }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--muted-2)", letterSpacing: "1.5px", textTransform: "uppercase" }}>Mantle Scout</span>
                 <button
                   onClick={() => sendQuery(input)}
                   disabled={loading || !input.trim()}
-                  style={{ background: loading || !input.trim() ? "var(--line)" : "var(--lime)", border: "none", borderRadius: "999px", padding: "10px 16px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: loading || !input.trim() ? "var(--muted)" : "#080C0A", letterSpacing: "1.5px", textTransform: "uppercase", transition: "all 0.15s" }}
+                  style={{ background: loading || !input.trim() ? "var(--line)" : "var(--lime)", border: "none", borderRadius: "999px", padding: isMobile ? "9px 14px" : "10px 16px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: loading || !input.trim() ? "var(--muted)" : "#080C0A", letterSpacing: "1.5px", textTransform: "uppercase", transition: "all 0.15s" }}
                 >
                   {loading ? "..." : "Research"}
                 </button>
               </div>
             </div>
             {messages.length === 0 && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginTop: "14px", paddingBottom: "2px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: isMobile ? "6px" : "8px", flexWrap: "wrap", marginTop: isMobile ? "10px" : "14px", paddingBottom: "2px" }}>
                 {QUICK_ACTIONS.map((action) => (
                   <button
                     key={action.label}
                     onClick={() => sendQuery(action.query)}
                     disabled={loading}
-                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: "999px", color: "var(--muted)", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "1px", padding: "8px 12px", textTransform: "uppercase", transition: "all 0.15s" }}
+                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: "999px", color: "var(--muted)", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: isMobile ? "9px" : "10px", letterSpacing: "1px", padding: isMobile ? "7px 10px" : "8px 12px", textTransform: "uppercase", transition: "all 0.15s" }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = "var(--lime)";
                       e.currentTarget.style.color = "var(--text)";
