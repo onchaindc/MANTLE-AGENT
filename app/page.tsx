@@ -476,7 +476,8 @@ export default function Home() {
           )}
 
           {messages.length > 0 && (
-            <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px", minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: isMobile ? "visible" : "auto", paddingTop: "32px", paddingBottom: "24px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {messages.map((message, index) => (
                 <div key={`${activeConversation?.id ?? "conversation"}-${index}`} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "var(--line)" : "var(--card)", border: message.role === "user" ? "1px solid var(--line)" : "1px solid var(--lime)", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>
@@ -519,10 +520,11 @@ export default function Home() {
 
               {error && <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)", padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--danger-text)" }}>Error: {error}</div>}
               <div ref={bottomRef} />
+              </div>
             </div>
           )}
 
-          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: messages.length > 0 ? "24px" : "8px", marginTop: messages.length === 0 ? "auto" : "0" }}>
+          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: messages.length > 0 ? "24px" : "8px", marginTop: messages.length === 0 ? "auto" : "0", zIndex: messages.length > 0 ? 5 : "auto" }}>
             <div style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: "18px", padding: isMobile ? "8px" : "10px", overflow: "hidden" }}>
               <input
                 value={input}
