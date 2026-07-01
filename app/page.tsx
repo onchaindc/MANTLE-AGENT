@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 const QUICK_ACTIONS = [
@@ -61,13 +60,6 @@ type Conversation = {
   updatedAt: string;
   persisted: boolean;
 };
-type ConversationPayload = {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: string;
-};
-
 const shellButton: React.CSSProperties = {
   background: "var(--card)",
   border: "1px solid var(--line)",
@@ -79,6 +71,13 @@ const shellButton: React.CSSProperties = {
   padding: "10px 14px",
   cursor: "pointer",
   transition: "all 0.15s",
+};
+
+const logoImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  display: "block",
 };
 
 function createConversationId() {
@@ -99,38 +98,6 @@ function createConversation(partial?: Partial<Conversation>): Conversation {
     createdAt: partial?.createdAt ?? now,
     updatedAt: partial?.updatedAt ?? now,
     persisted: partial?.persisted ?? false,
-  };
-}
-
-function normalizeMessage(message: unknown): Message | null {
-  if (!message || typeof message !== "object") return null;
-
-  const candidate = message as Partial<Message>;
-
-  if ((candidate.role !== "user" && candidate.role !== "assistant") || typeof candidate.content !== "string") {
-    return null;
-  }
-
-  return {
-    role: candidate.role,
-    content: candidate.content,
-  };
-}
-
-function normalizeConversation(conversation: any): Conversation | null {
-  if (!conversation || typeof conversation !== "object") return null;
-
-  const messages = Array.isArray(conversation.messages)
-    ? conversation.messages.map(normalizeMessage).filter(Boolean) as Message[]
-    : [];
-
-  return {
-    id: typeof conversation.id === "string" ? conversation.id : createConversationId(),
-    title: typeof conversation.title === "string" && conversation.title.trim() ? conversation.title : "New Chat",
-    messages,
-    createdAt: typeof conversation.createdAt === "string" ? conversation.createdAt : new Date().toISOString(),
-    updatedAt: typeof conversation.createdAt === "string" ? conversation.createdAt : new Date().toISOString(),
-    persisted: true,
   };
 }
 
@@ -206,7 +173,6 @@ function MoonIcon() {
 }
 
 export default function Home() {
-  const { data: session, status } = useSession();
   const initialConversationRef = useRef<Conversation>(createConversation());
   const [theme, setTheme] = useState<Theme>("dark");
   const [conversations, setConversations] = useState<Conversation[]>(() => [initialConversationRef.current]);
@@ -218,13 +184,10 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const guestConversationsRef = useRef<Conversation[]>([initialConversationRef.current]);
-  const guestActiveConversationIdRef = useRef(initialConversationRef.current.id);
 
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0];
   const messages = activeConversation?.messages ?? [];
   const conversationList = [...conversations].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-  const isAuthenticated = status === "authenticated";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -246,72 +209,6 @@ export default function Home() {
       setShowHistory(true);
     }
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) return;
-
-    guestConversationsRef.current = conversations;
-    guestActiveConversationIdRef.current = activeConversationId || conversations[0]?.id || guestActiveConversationIdRef.current;
-  }, [activeConversationId, conversations, isAuthenticated]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    if (status !== "authenticated") {
-      const guestConversations = guestConversationsRef.current.length > 0
-        ? guestConversationsRef.current
-        : [createConversation()];
-      const nextActiveId = guestConversations.some((conversation) => conversation.id === guestActiveConversationIdRef.current)
-        ? guestActiveConversationIdRef.current
-        : guestConversations[0].id;
-
-      setConversations(guestConversations);
-      setActiveConversationId(nextActiveId);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadConversations() {
-      try {
-        const response = await fetch("/api/conversations", {
-          headers: { "Cache-Control": "no-store" },
-        });
-        const data = await response.json();
-
-        if (cancelled) return;
-
-        const remoteConversations = Array.isArray(data.conversations)
-          ? data.conversations.map(normalizeConversation).filter(Boolean) as Conversation[]
-          : [];
-
-        const localDrafts = guestConversationsRef.current.filter((conversation) => !conversation.persisted && conversation.messages.length > 0);
-        const mergedConversations = localDrafts.length > 0
-          ? [...localDrafts, ...remoteConversations.filter((remote) => !localDrafts.some((draft) => draft.id === remote.id))]
-          : remoteConversations;
-
-        if (mergedConversations.length > 0) {
-          setConversations(mergedConversations);
-          setActiveConversationId(localDrafts[0]?.id ?? mergedConversations[0].id);
-        } else {
-          const blankConversation = createConversation();
-          setConversations([blankConversation]);
-          setActiveConversationId(blankConversation.id);
-        }
-      } catch {
-        if (cancelled) return;
-        const blankConversation = createConversation();
-        setConversations([blankConversation]);
-        setActiveConversationId(blankConversation.id);
-      }
-    }
-
-    void loadConversations();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [status]);
 
   function selectConversation(conversationId: string) {
     setActiveConversationId(conversationId);
@@ -341,9 +238,6 @@ export default function Home() {
     setInput("");
     setError("");
 
-    if (isAuthenticated && activeConversation.persisted) {
-      void persistConversation(resetConversation);
-    }
   }
 
   function goBack() {
@@ -372,45 +266,6 @@ export default function Home() {
     setConversations((current) => current.map((conversation) => conversation.id === nextConversation.id ? nextConversation : conversation));
     setError("");
 
-    if (isAuthenticated && (activeConversation.persisted || nextMessages.length > 0)) {
-      void persistConversation(nextConversation);
-    }
-  }
-
-  async function persistConversation(conversation: Conversation) {
-    if (!isAuthenticated || (!conversation.persisted && conversation.messages.length === 0)) {
-      return false;
-    }
-
-    const payload: ConversationPayload = {
-      id: conversation.id,
-      title: conversation.title,
-      messages: conversation.messages,
-      createdAt: conversation.createdAt,
-    };
-
-    const response = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    setConversations((current) =>
-      current.map((item) =>
-        item.id === conversation.id
-          ? {
-              ...conversation,
-              persisted: true,
-            }
-          : item
-      )
-    );
-
-    return true;
   }
 
   async function sendQuery(query: string) {
@@ -451,9 +306,6 @@ export default function Home() {
 
       setConversations((current) => current.map((conversation) => conversation.id === finalConversation.id ? finalConversation : conversation));
       if (data.liveData) setLiveData(data.liveData);
-      if (isAuthenticated) {
-        void persistConversation(finalConversation);
-      }
     } catch (e: any) {
       setError(e.message || "Something went wrong.");
     } finally {
@@ -513,8 +365,8 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
       <header style={{ borderBottom: "1px solid var(--line)", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 20, gap: "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "40px", height: "40px", background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: "20px", fontWeight: 700, color: "#080C0A", fontFamily: "var(--font-mono)", lineHeight: 1 }}>M</span>
+          <div style={{ width: "40px", height: "40px", overflow: "hidden" }}>
+            <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
           </div>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "4px", color: "var(--text)", textTransform: "uppercase" }}>Mantle Scout</span>
         </div>
@@ -523,33 +375,9 @@ export default function Home() {
           <button onClick={() => setShowHistory((value) => !value)} style={{ ...shellButton, borderColor: showHistory ? "var(--lime)" : "var(--line)", color: showHistory ? "var(--text)" : "var(--text-soft)" }}>
             History
           </button>
-          <button onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} style={{ ...shellButton, display: "flex", alignItems: "center", justifyContent: "center", width: "38px", padding: 0, color: "var(--text)" }} aria-label="Toggle theme">
+          <button onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} style={{ ...shellButton, display: "flex", alignItems: "center", justifyContent: "center", minWidth: "44px", padding: "10px 14px", color: "var(--text)" }} aria-label="Toggle theme">
             {theme === "dark" ? <MoonIcon /> : <SunIcon />}
           </button>
-          {status === "authenticated" ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 2px" }}>
-                {session?.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session?.user?.name ?? "Signed in user"}
-                    style={{ width: "28px", height: "28px", borderRadius: "999px", objectFit: "cover", border: "1px solid var(--line)" }}
-                  />
-                ) : (
-                  <div style={{ width: "28px", height: "28px", borderRadius: "999px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--lime)", color: "#080C0A", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700 }}>
-                    M
-                  </div>
-                )}
-                <button onClick={() => signOut({ callbackUrl: "/" })} style={{ ...shellButton, padding: "8px 12px" }}>
-                  Sign Out
-                </button>
-              </div>
-            </>
-          ) : (
-            <button onClick={() => signIn("google")} style={{ ...shellButton, padding: "8px 12px" }}>
-              Sign In
-            </button>
-          )}
           <button onClick={goBack} disabled={loading || messages.length === 0} style={{ ...shellButton, opacity: loading || messages.length === 0 ? 0.45 : 1 }}>
             Back
           </button>
@@ -626,8 +454,8 @@ export default function Home() {
           {messages.length === 0 && (
             <div style={{ minHeight: "calc(100vh - 270px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 0 24px", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "var(--text)" }}>
-                <div style={{ width: "30px", height: "30px", background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "15px", fontWeight: 700, color: "#080C0A", fontFamily: "var(--font-mono)", lineHeight: 1 }}>M</span>
+                <div style={{ width: "30px", height: "30px", overflow: "hidden" }}>
+                  <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
                 </div>
                 <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "var(--text)", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
                   What should we scout on Mantle?
@@ -641,7 +469,7 @@ export default function Home() {
               {messages.map((message, index) => (
                 <div key={`${activeConversation?.id ?? "conversation"}-${index}`} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "var(--line)" : "var(--card)", border: message.role === "user" ? "1px solid var(--line)" : "1px solid var(--lime)", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>
-                    {message.role === "user" ? "YOU" : <span style={{ color: "var(--lime)", fontSize: "12px" }}>M</span>}
+                    {message.role === "user" ? "YOU" : <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     {message.role === "user" ? (
@@ -668,7 +496,7 @@ export default function Home() {
               {loading && (
                 <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
                   <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card)", border: "1px solid var(--lime)", overflow: "hidden" }}>
-                    <span style={{ color: "var(--lime)", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700 }}>M</span>
+                    <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
                   </div>
                   <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderTop: "2px solid var(--lime)", padding: "20px 28px", display: "flex", gap: "6px", alignItems: "center" }}>
                     {[0, 1, 2].map((dot) => (
