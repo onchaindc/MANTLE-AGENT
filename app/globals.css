@@ -1,23 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --black:  #080C0A;
-  --panel:  #0F1611;
+  --black: #080C0A;
+  --panel: #0F1611;
   --border: #1A2A1C;
-  --lime:   #6CFF4A;
-  --lime2:  #3DBF22;
-  --muted:  #4A6650;
-  --white:  #EEF5F0;
+  --lime: #6CFF4A;
+  --lime2: #3DBF22;
+  --muted: #4A6650;
+  --white: #EEF5F0;
+  --bg: #080C0A;
+  --panel-soft: #0A0E0B;
+  --card: #0F1611;
+  --line: #1A2A1C;
+  --text: #EEF5F0;
+  --text-soft: #C8D8CC;
+  --muted-2: #2A3A2C;
+  --danger-bg: #1A0A0A;
+  --danger-border: #3A1A1A;
+  --danger-text: #FF6A6A;
+}
+
+[data-theme="light"] {
+  --bg: #F5F7F5;
+  --panel-soft: #FFFFFF;
+  --card: #FFFFFF;
+  --line: #D4E0D4;
+  --text: #0A1A0A;
+  --text-soft: #0A1A0A;
+  --muted: #5A7A5A;
+  --muted-2: #86A186;
+  --danger-bg: #FFF2F2;
+  --danger-border: #F0C7C7;
+  --danger-text: #BF3B3B;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--black);
-  color: var(--white);
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Space Grotesk', sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--panel); }
-::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-track { background: var(--card); }
+::-webkit-scrollbar-thumb { background: var(--line); }

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 
 const QUICK_ACTIONS = [
   {
@@ -31,6 +31,9 @@ const FOLLOW_UPS = {
   data: "Show the supporting data, metrics, and concrete numbers behind that answer.",
 };
 
+const THEME_STORAGE_KEY = "mantle-scout-theme";
+
+type Theme = "dark" | "light";
 type Message = { role: "user" | "assistant"; content: string };
 type LiveToken = {
   name: string;
@@ -50,11 +53,25 @@ type ParsedBlock = {
   type: "heading" | "paragraph";
   content: string;
 };
+type Conversation = {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
+  persisted: boolean;
+};
+type ConversationPayload = {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+};
 
 const shellButton: React.CSSProperties = {
-  background: "#0F1611",
-  border: "1px solid #1A2A1C",
-  color: "#C8D8CC",
+  background: "var(--card)",
+  border: "1px solid var(--line)",
+  color: "var(--text-soft)",
   fontFamily: "var(--font-mono)",
   fontSize: "10px",
   letterSpacing: "1px",
@@ -64,19 +81,136 @@ const shellButton: React.CSSProperties = {
   transition: "all 0.15s",
 };
 
+function createConversationId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `conversation_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function createConversation(partial?: Partial<Conversation>): Conversation {
+  const now = new Date().toISOString();
+
+  return {
+    id: partial?.id ?? createConversationId(),
+    title: partial?.title ?? "New Chat",
+    messages: partial?.messages ?? [],
+    createdAt: partial?.createdAt ?? now,
+    updatedAt: partial?.updatedAt ?? now,
+    persisted: partial?.persisted ?? false,
+  };
+}
+
+function normalizeMessage(message: unknown): Message | null {
+  if (!message || typeof message !== "object") return null;
+
+  const candidate = message as Partial<Message>;
+
+  if ((candidate.role !== "user" && candidate.role !== "assistant") || typeof candidate.content !== "string") {
+    return null;
+  }
+
+  return {
+    role: candidate.role,
+    content: candidate.content,
+  };
+}
+
+function normalizeConversation(conversation: any): Conversation | null {
+  if (!conversation || typeof conversation !== "object") return null;
+
+  const messages = Array.isArray(conversation.messages)
+    ? conversation.messages.map(normalizeMessage).filter(Boolean) as Message[]
+    : [];
+
+  return {
+    id: typeof conversation.id === "string" ? conversation.id : createConversationId(),
+    title: typeof conversation.title === "string" && conversation.title.trim() ? conversation.title : "New Chat",
+    messages,
+    createdAt: typeof conversation.createdAt === "string" ? conversation.createdAt : new Date().toISOString(),
+    updatedAt: typeof conversation.createdAt === "string" ? conversation.createdAt : new Date().toISOString(),
+    persisted: true,
+  };
+}
+
+function conversationTitle(messages: Message[]) {
+  const firstUserMessage = messages.find((message) => message.role === "user")?.content.trim();
+
+  if (!firstUserMessage) {
+    return "New Chat";
+  }
+
+  return firstUserMessage.length > 40 ? `${firstUserMessage.slice(0, 37)}...` : firstUserMessage;
+}
+
 function parseResponse(content: string): ParsedBlock[] {
-  return content
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => ({
-      type: /:$/.test(block) ? "heading" : "paragraph",
-      content: block,
-    }));
+  const blocks: ParsedBlock[] = [];
+  const lines = content.split(/\r?\n/);
+  let paragraphLines: string[] = [];
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) return;
+    blocks.push({ type: "paragraph", content: paragraphLines.join("\n").trim() });
+    paragraphLines = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushParagraph();
+      continue;
+    }
+
+    if (trimmed.endsWith(":")) {
+      flushParagraph();
+      blocks.push({ type: "heading", content: trimmed });
+      continue;
+    }
+
+    paragraphLines.push(line);
+  }
+
+  flushParagraph();
+  return blocks;
+}
+
+function formatCompact(n?: number) {
+  if (n === undefined) return "-";
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${n.toFixed(2)}`;
+}
+
+function truncateTitle(title: string) {
+  return title.length > 40 ? `${title.slice(0, 37)}...` : title;
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 2.5V5.5M12 18.5V21.5M2.5 12H5.5M18.5 12H21.5M5.2 5.2L7.3 7.3M16.7 16.7L18.8 18.8M18.8 5.2L16.7 7.3M7.3 16.7L5.2 18.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+      <path d="M19 14.7A7.5 7.5 0 0 1 9.3 5a8.4 8.4 0 1 0 9.7 9.7Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { data: session, status } = useSession();
+  const initialConversationRef = useRef<Conversation>(createConversation());
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [conversations, setConversations] = useState<Conversation[]>(() => [initialConversationRef.current]);
+  const [activeConversationId, setActiveConversationId] = useState(initialConversationRef.current.id);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [liveData, setLiveData] = useState<LiveData | null>(null);
@@ -84,65 +218,138 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const messageRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const guestConversationsRef = useRef<Conversation[]>([initialConversationRef.current]);
+  const guestActiveConversationIdRef = useRef(initialConversationRef.current.id);
 
-  const questionHistory = useMemo(
-    () => messages
-      .map((message, index) => ({ message, index }))
-      .filter(({ message }) => message.role === "user"),
-    [messages]
-  );
+  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0];
+  const messages = activeConversation?.messages ?? [];
+  const conversationList = [...conversations].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  const isAuthenticated = status === "authenticated";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [activeConversationId, messages.length, loading]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setShowHistory(window.innerWidth >= 1024);
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    setTheme(storedTheme === "light" ? "light" : "dark");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setShowHistory(true);
     }
   }, []);
 
-  async function sendQuery(query: string) {
-    if (!query.trim() || loading) return;
+  useEffect(() => {
+    if (isAuthenticated) return;
 
-    setError("");
-    const userMsg: Message = { role: "user", content: query };
-    const history = [...messages];
-    const newMessages = [...history, userMsg];
+    guestConversationsRef.current = conversations;
+    guestActiveConversationIdRef.current = activeConversationId || conversations[0]?.id || guestActiveConversationIdRef.current;
+  }, [activeConversationId, conversations, isAuthenticated]);
 
-    setMessages(newMessages);
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (status !== "authenticated") {
+      const guestConversations = guestConversationsRef.current.length > 0
+        ? guestConversationsRef.current
+        : [createConversation()];
+      const nextActiveId = guestConversations.some((conversation) => conversation.id === guestActiveConversationIdRef.current)
+        ? guestActiveConversationIdRef.current
+        : guestConversations[0].id;
+
+      setConversations(guestConversations);
+      setActiveConversationId(nextActiveId);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadConversations() {
+      try {
+        const response = await fetch("/api/conversations", {
+          headers: { "Cache-Control": "no-store" },
+        });
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        const remoteConversations = Array.isArray(data.conversations)
+          ? data.conversations.map(normalizeConversation).filter(Boolean) as Conversation[]
+          : [];
+
+        const localDrafts = guestConversationsRef.current.filter((conversation) => !conversation.persisted && conversation.messages.length > 0);
+        const mergedConversations = localDrafts.length > 0
+          ? [...localDrafts, ...remoteConversations.filter((remote) => !localDrafts.some((draft) => draft.id === remote.id))]
+          : remoteConversations;
+
+        if (mergedConversations.length > 0) {
+          setConversations(mergedConversations);
+          setActiveConversationId(localDrafts[0]?.id ?? mergedConversations[0].id);
+        } else {
+          const blankConversation = createConversation();
+          setConversations([blankConversation]);
+          setActiveConversationId(blankConversation.id);
+        }
+      } catch {
+        if (cancelled) return;
+        const blankConversation = createConversation();
+        setConversations([blankConversation]);
+        setActiveConversationId(blankConversation.id);
+      }
+    }
+
+    void loadConversations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
+
+  function selectConversation(conversationId: string) {
+    setActiveConversationId(conversationId);
+  }
+
+  function startNewConversation() {
+    if (loading) return;
+
+    const nextConversation = createConversation();
+    setConversations((current) => [nextConversation, ...current]);
+    setActiveConversationId(nextConversation.id);
     setInput("");
-    setLoading(true);
+    setError("");
+  }
 
-    try {
-      const res = await fetch("/api/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, history }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setMessages([...newMessages, { role: "assistant", content: data.response }]);
-      if (data.liveData) setLiveData(data.liveData);
-    } catch (e: any) {
-      setError(e.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
+  function goHome() {
+    if (loading || !activeConversation) return;
+
+    const resetConversation: Conversation = {
+      ...activeConversation,
+      title: "New Chat",
+      messages: [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    setConversations((current) => current.map((conversation) => conversation.id === resetConversation.id ? resetConversation : conversation));
+    setInput("");
+    setError("");
+
+    if (isAuthenticated && activeConversation.persisted) {
+      void persistConversation(resetConversation);
     }
   }
 
-  function resetChat() {
-    if (loading) return;
-    setMessages([]);
-    setInput("");
-    setError("");
-  }
-
   function goBack() {
-    if (loading || messages.length === 0) return;
+    if (loading || !activeConversation) return;
 
-    const nextMessages = [...messages];
+    const nextMessages = [...activeConversation.messages];
     const lastAssistantIndex = [...nextMessages].reverse().findIndex((message) => message.role === "assistant");
 
     if (lastAssistantIndex !== -1) {
@@ -155,8 +362,103 @@ export default function Home() {
       nextMessages.splice(nextMessages.length - 1 - lastUserIndex, 1);
     }
 
-    setMessages(nextMessages);
+    const nextConversation = {
+      ...activeConversation,
+      title: conversationTitle(nextMessages),
+      messages: nextMessages,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setConversations((current) => current.map((conversation) => conversation.id === nextConversation.id ? nextConversation : conversation));
     setError("");
+
+    if (isAuthenticated && (activeConversation.persisted || nextMessages.length > 0)) {
+      void persistConversation(nextConversation);
+    }
+  }
+
+  async function persistConversation(conversation: Conversation) {
+    if (!isAuthenticated || (!conversation.persisted && conversation.messages.length === 0)) {
+      return false;
+    }
+
+    const payload: ConversationPayload = {
+      id: conversation.id,
+      title: conversation.title,
+      messages: conversation.messages,
+      createdAt: conversation.createdAt,
+    };
+
+    const response = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    setConversations((current) =>
+      current.map((item) =>
+        item.id === conversation.id
+          ? {
+              ...conversation,
+              persisted: true,
+            }
+          : item
+      )
+    );
+
+    return true;
+  }
+
+  async function sendQuery(query: string) {
+    if (!query.trim() || loading || !activeConversation) return;
+
+    setError("");
+    setLoading(true);
+
+    const userMessage: Message = { role: "user", content: query };
+    const baseMessages = activeConversation.messages;
+    const nextMessages = [...baseMessages, userMessage];
+    const nextTitle = conversationTitle(nextMessages);
+    const nextConversation: Conversation = {
+      ...activeConversation,
+      title: nextTitle,
+      messages: nextMessages,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setConversations((current) => current.map((conversation) => conversation.id === nextConversation.id ? nextConversation : conversation));
+    setInput("");
+
+    try {
+      const res = await fetch("/api/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, history: baseMessages }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const finalMessages = [...nextMessages, { role: "assistant" as const, content: data.response }];
+      const finalConversation: Conversation = {
+        ...nextConversation,
+        messages: finalMessages,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setConversations((current) => current.map((conversation) => conversation.id === finalConversation.id ? finalConversation : conversation));
+      if (data.liveData) setLiveData(data.liveData);
+      if (isAuthenticated) {
+        void persistConversation(finalConversation);
+      }
+    } catch (e: any) {
+      setError(e.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function copyResponse(content: string) {
@@ -170,89 +472,152 @@ export default function Home() {
   function shareResponse(content: string) {
     const snippet = content.slice(0, 200).trim();
     const text = `${snippet} - via Mantle Scout mantlescout.vercel.app @Mantle_Official #Mantle #RWA`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
-  function scrollToMessage(index: number) {
-    messageRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function renderMessageBlocks(content: string) {
+    return parseResponse(content).map((block, blockIndex) =>
+      block.type === "heading" ? (
+        <div
+          key={blockIndex}
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "12px",
+            color: "var(--lime)",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+          }}
+        >
+          {block.content}
+        </div>
+      ) : (
+        <p
+          key={blockIndex}
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "14px",
+            color: "var(--text-soft)",
+            lineHeight: 1.8,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            margin: 0,
+          }}
+        >
+          {block.content}
+        </p>
+      )
+    );
   }
-
-  const fmtCompact = (n?: number) => {
-    if (n === undefined) return "-";
-    if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-    return `$${n.toFixed(2)}`;
-  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#080C0A", display: "flex", flexDirection: "column" }}>
-      <header style={{ borderBottom: "1px solid #1A2A1C", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#080C0A", zIndex: 10, gap: "16px", flexWrap: "wrap" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
+      <header style={{ borderBottom: "1px solid var(--line)", padding: "0 32px", minHeight: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 20, gap: "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-            <Image src="/mantle-logo.png" alt="Mantle Scout logo" width={32} height={32} style={{ width: "32px", height: "32px", objectFit: "cover", display: "block" }} priority />
+          <div style={{ width: "40px", height: "40px", background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: "20px", fontWeight: 700, color: "#080C0A", fontFamily: "var(--font-mono)", lineHeight: 1 }}>M</span>
           </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", letterSpacing: "3px", color: "#EEF5F0", textTransform: "uppercase" }}>Mantle Scout</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "4px", color: "var(--text)", textTransform: "uppercase" }}>Mantle Scout</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button onClick={() => setShowHistory((value) => !value)} style={{ ...shellButton, borderColor: showHistory ? "#6CFF4A" : "#1A2A1C", color: showHistory ? "#EEF5F0" : "#C8D8CC" }}>
+          <button onClick={() => setShowHistory((value) => !value)} style={{ ...shellButton, borderColor: showHistory ? "var(--lime)" : "var(--line)", color: showHistory ? "var(--text)" : "var(--text-soft)" }}>
             History
           </button>
+          <button onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} style={{ ...shellButton, display: "flex", alignItems: "center", justifyContent: "center", width: "38px", padding: 0, color: "var(--text)" }} aria-label="Toggle theme">
+            {theme === "dark" ? <MoonIcon /> : <SunIcon />}
+          </button>
+          {status === "authenticated" ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 2px" }}>
+                {session?.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session?.user?.name ?? "Signed in user"}
+                    style={{ width: "28px", height: "28px", borderRadius: "999px", objectFit: "cover", border: "1px solid var(--line)" }}
+                  />
+                ) : (
+                  <div style={{ width: "28px", height: "28px", borderRadius: "999px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--lime)", color: "#080C0A", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700 }}>
+                    M
+                  </div>
+                )}
+                <button onClick={() => signOut({ callbackUrl: "/" })} style={{ ...shellButton, padding: "8px 12px" }}>
+                  Sign Out
+                </button>
+              </div>
+            </>
+          ) : (
+            <button onClick={() => signIn("google")} style={{ ...shellButton, padding: "8px 12px" }}>
+              Sign In
+            </button>
+          )}
           <button onClick={goBack} disabled={loading || messages.length === 0} style={{ ...shellButton, opacity: loading || messages.length === 0 ? 0.45 : 1 }}>
             Back
           </button>
-          <button onClick={resetChat} disabled={loading || messages.length === 0} style={{ ...shellButton, opacity: loading || messages.length === 0 ? 0.45 : 1 }}>
-            Home
-          </button>
-          <button onClick={resetChat} disabled={loading} style={{ ...shellButton, borderColor: "#6CFF4A", color: "#EEF5F0", opacity: loading ? 0.45 : 1 }}>
+          <button onClick={startNewConversation} disabled={loading} style={{ ...shellButton, borderColor: "var(--lime)", color: "var(--text)", opacity: loading ? 0.45 : 1 }}>
             New Chat
           </button>
-          <button onClick={() => setShowLiveStats((value) => !value)} style={{ ...shellButton, borderColor: showLiveStats ? "#6CFF4A" : "#1A2A1C", color: showLiveStats ? "#EEF5F0" : "#C8D8CC" }}>
+          <button onClick={goHome} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>
+            Home
+          </button>
+          <button onClick={() => setShowLiveStats((value) => !value)} style={{ ...shellButton, borderColor: showLiveStats ? "var(--lime)" : "var(--line)", color: showLiveStats ? "var(--text)" : "var(--text-soft)" }}>
             Live Stats {showLiveStats ? "On" : "Off"}
           </button>
         </div>
       </header>
 
       {showLiveStats && (
-        <div style={{ borderBottom: "1px solid #1A2A1C", padding: "14px 32px", background: "#0A0E0B", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-          <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>MNT PRICE</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "-"}</div>
+        <div style={{ borderBottom: "1px solid var(--line)", padding: "14px 32px", background: "var(--panel-soft)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MNT PRICE</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "-"}</div>
           </div>
-          <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>MARKET CAP</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>{fmtCompact(liveData?.mntMarketCap)}</div>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MARKET CAP</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntMarketCap)}</div>
           </div>
-          <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>24H VOLUME</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>{fmtCompact(liveData?.mntVolume)}</div>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>24H VOLUME</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mntVolume)}</div>
           </div>
-          <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>MANTLE TVL</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>{fmtCompact(liveData?.mantleTVL)}</div>
+          <div style={{ background: "var(--card)", border: "1px solid var(--line)", padding: "14px 16px" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--muted)", marginBottom: "8px" }}>MANTLE TVL</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "var(--text)", fontWeight: 700 }}>{formatCompact(liveData?.mantleTVL)}</div>
           </div>
         </div>
       )}
 
       <div style={{ flex: 1, display: "flex", width: "100%" }}>
         {showHistory && (
-          <aside style={{ width: "280px", borderRight: "1px solid #1A2A1C", background: "#0A0E0B", padding: "24px 16px", flexShrink: 0 }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "#6CFF4A", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "16px" }}>
-              Session History
+          <aside style={{ width: "280px", borderRight: "1px solid var(--line)", background: "var(--panel-soft)", padding: "24px 16px", flexShrink: 0 }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--lime)", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "16px" }}>
+              Conversations
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {questionHistory.length === 0 && (
-                <div style={{ fontSize: "13px", color: "#4A6650", lineHeight: 1.5 }}>Your questions will appear here.</div>
+              {conversationList.length === 0 && (
+                <div style={{ fontSize: "13px", color: "var(--muted)", lineHeight: 1.5 }}>Your conversations will appear here.</div>
               )}
-              {questionHistory.map(({ message, index }, historyIndex) => (
-                <button
-                  key={`${historyIndex}-${message.content}`}
-                  onClick={() => scrollToMessage(index)}
-                  style={{ background: "#0F1611", border: "1px solid #1A2A1C", color: "#4A6650", textAlign: "left", padding: "12px 14px", cursor: "pointer", fontSize: "13px", lineHeight: 1.5 }}
-                >
-                  {message.content}
-                </button>
-              ))}
+              {conversationList.map((conversation) => {
+                const isActive = conversation.id === activeConversation?.id;
+
+                return (
+                  <button
+                    key={conversation.id}
+                    onClick={() => selectConversation(conversation.id)}
+                    style={{
+                      background: isActive ? "var(--card)" : "transparent",
+                      border: `1px solid ${isActive ? "var(--lime)" : "var(--line)"}`,
+                      color: "var(--muted)",
+                      textAlign: "left",
+                      padding: "12px 14px",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {truncateTitle(conversation.title)}
+                  </button>
+                );
+              })}
             </div>
           </aside>
         )}
@@ -260,9 +625,11 @@ export default function Home() {
         <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: "32px" }}>
           {messages.length === 0 && (
             <div style={{ minHeight: "calc(100vh - 270px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 0 24px", textAlign: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "#EEF5F0" }}>
-                <Image src="/mantle-logo.png" alt="Mantle Scout" width={30} height={30} style={{ width: "30px", height: "30px", objectFit: "cover", display: "block", opacity: 0.9 }} priority />
-                <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "#EEF5F0", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "var(--text)" }}>
+                <div style={{ width: "30px", height: "30px", background: "var(--lime)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 700, color: "#080C0A", fontFamily: "var(--font-mono)", lineHeight: 1 }}>M</span>
+                </div>
+                <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "var(--text)", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
                   What should we scout on Mantle?
                 </h1>
               </div>
@@ -272,35 +639,25 @@ export default function Home() {
           {messages.length > 0 && (
             <div style={{ flex: 1, paddingTop: "32px", paddingBottom: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
               {messages.map((message, index) => (
-                <div key={index} ref={(element) => { messageRefs.current[index] = element; }} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "#1A2A1C" : "#080C0A", border: message.role === "user" ? "1px solid #1A2A1C" : "1px solid #6CFF4A", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "#4A6650" }}>
-                    {message.role === "user" ? "YOU" : <Image src="/mantle-logo.png" alt="Mantle Scout" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />}
+                <div key={`${activeConversation?.id ?? "conversation"}-${index}`} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: message.role === "user" ? "var(--line)" : "var(--card)", border: message.role === "user" ? "1px solid var(--line)" : "1px solid var(--lime)", overflow: "hidden", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>
+                    {message.role === "user" ? "YOU" : <span style={{ color: "var(--lime)", fontSize: "12px" }}>M</span>}
                   </div>
                   <div style={{ flex: 1 }}>
                     {message.role === "user" ? (
-                      <p style={{ fontSize: "15px", color: "#EEF5F0", lineHeight: 1.6, paddingTop: "4px" }}>{message.content}</p>
+                      <p style={{ fontSize: "15px", color: "var(--text)", lineHeight: 1.6, paddingTop: "4px" }}>{message.content}</p>
                     ) : (
                       <>
-                        <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", borderTop: "2px solid #6CFF4A", padding: "24px 28px" }}>
+                        <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderTop: "2px solid var(--lime)", padding: "24px 28px" }}>
                           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                            {parseResponse(message.content).map((block, blockIndex) =>
-                              block.type === "heading" ? (
-                                <div key={blockIndex} style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#6CFF4A", letterSpacing: "2px", textTransform: "uppercase" }}>
-                                  {block.content}
-                                </div>
-                              ) : (
-                                <p key={blockIndex} style={{ fontFamily: "var(--font-sans)", fontSize: "14px", color: "#C8D8CC", lineHeight: 1.8, whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}>
-                                  {block.content}
-                                </p>
-                              )
-                            )}
+                            {renderMessageBlocks(message.content)}
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
                           <button onClick={() => copyResponse(message.content)} style={shellButton}>Copy</button>
                           <button onClick={() => shareResponse(message.content)} style={shellButton}>Share</button>
-                          <button onClick={() => sendQuery(`${message.content}\n\n${FOLLOW_UPS.more}`)} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>Tell Me More</button>
-                          <button onClick={() => sendQuery(`${message.content}\n\n${FOLLOW_UPS.data}`)} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>Show Data</button>
+                          <button onClick={() => sendQuery(FOLLOW_UPS.more)} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>Tell Me More</button>
+                          <button onClick={() => sendQuery(FOLLOW_UPS.data)} disabled={loading} style={{ ...shellButton, opacity: loading ? 0.45 : 1 }}>Show Data</button>
                         </div>
                       </>
                     )}
@@ -310,37 +667,37 @@ export default function Home() {
 
               {loading && (
                 <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#080C0A", border: "1px solid #6CFF4A", overflow: "hidden" }}>
-                    <Image src="/mantle-logo.png" alt="Mantle Scout" width={28} height={28} style={{ width: "28px", height: "28px", objectFit: "cover", display: "block" }} />
+                  <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card)", border: "1px solid var(--lime)", overflow: "hidden" }}>
+                    <span style={{ color: "var(--lime)", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700 }}>M</span>
                   </div>
-                  <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", borderTop: "2px solid #6CFF4A", padding: "20px 28px", display: "flex", gap: "6px", alignItems: "center" }}>
+                  <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderTop: "2px solid var(--lime)", padding: "20px 28px", display: "flex", gap: "6px", alignItems: "center" }}>
                     {[0, 1, 2].map((dot) => (
-                      <div key={dot} style={{ width: "6px", height: "6px", background: "#6CFF4A", borderRadius: "50%", animation: `pulse 1.2s ease-in-out ${dot * 0.2}s infinite` }} />
+                      <div key={dot} style={{ width: "6px", height: "6px", background: "var(--lime)", borderRadius: "50%", animation: `pulse 1.2s ease-in-out ${dot * 0.2}s infinite` }} />
                     ))}
                   </div>
                 </div>
               )}
 
-              {error && <div style={{ background: "#1A0A0A", border: "1px solid #3A1A1A", padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "#FF6A6A" }}>Error: {error}</div>}
+              {error && <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-border)", padding: "14px 18px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--danger-text)" }}>Error: {error}</div>}
               <div ref={bottomRef} />
             </div>
           )}
 
-          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "#080C0A", borderTop: messages.length > 0 ? "1px solid #1A2A1C" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: "24px" }}>
-            <div style={{ border: "1px solid #1A2A1C", background: "#0F1611", borderRadius: "18px", padding: "10px", overflow: "hidden" }}>
+          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: "24px" }}>
+            <div style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: "18px", padding: "10px", overflow: "hidden" }}>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendQuery(input)}
                 placeholder="Ask about any Mantle protocol, token, or trend"
-                style={{ width: "100%", minHeight: "58px", background: "transparent", border: "none", outline: "none", padding: "14px 14px 18px", color: "#EEF5F0", fontSize: "15px", fontFamily: "var(--font-sans)" }}
+                style={{ width: "100%", minHeight: "58px", background: "transparent", border: "none", outline: "none", padding: "14px 14px 18px", color: "var(--text)", fontSize: "15px", fontFamily: "var(--font-sans)" }}
               />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderTop: "1px solid #1A2A1C", paddingTop: "10px" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#2A3A2C", letterSpacing: "1.5px", textTransform: "uppercase" }}>Mantle Scout</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderTop: "1px solid var(--line)", paddingTop: "10px" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--muted-2)", letterSpacing: "1.5px", textTransform: "uppercase" }}>Mantle Scout</span>
                 <button
                   onClick={() => sendQuery(input)}
                   disabled={loading || !input.trim()}
-                  style={{ background: loading || !input.trim() ? "#1A2A1C" : "#6CFF4A", border: "none", borderRadius: "999px", padding: "10px 16px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: loading || !input.trim() ? "#4A6650" : "#080C0A", letterSpacing: "1.5px", textTransform: "uppercase", transition: "all 0.15s" }}
+                  style={{ background: loading || !input.trim() ? "var(--line)" : "var(--lime)", border: "none", borderRadius: "999px", padding: "10px 16px", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: loading || !input.trim() ? "var(--muted)" : "#080C0A", letterSpacing: "1.5px", textTransform: "uppercase", transition: "all 0.15s" }}
                 >
                   {loading ? "..." : "Research"}
                 </button>
@@ -353,14 +710,14 @@ export default function Home() {
                     key={action.label}
                     onClick={() => sendQuery(action.query)}
                     disabled={loading}
-                    style={{ background: "transparent", border: "1px solid #1A2A1C", borderRadius: "999px", color: "#4A6650", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "1px", padding: "8px 12px", textTransform: "uppercase", transition: "all 0.15s" }}
+                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: "999px", color: "var(--muted)", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-mono)", fontSize: "10px", letterSpacing: "1px", padding: "8px 12px", textTransform: "uppercase", transition: "all 0.15s" }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#6CFF4A";
-                      e.currentTarget.style.color = "#EEF5F0";
+                      e.currentTarget.style.borderColor = "var(--lime)";
+                      e.currentTarget.style.color = "var(--text)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "#1A2A1C";
-                      e.currentTarget.style.color = "#4A6650";
+                      e.currentTarget.style.borderColor = "var(--line)";
+                      e.currentTarget.style.color = "var(--muted)";
                     }}
                   >
                     {action.label}
