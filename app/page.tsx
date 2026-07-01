@@ -123,7 +123,7 @@ export default function Home() {
   }
 
   const fmtCompact = (n?: number) => {
-    if (n === undefined) return "—";
+    if (n === undefined) return "â€”";
     if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
     if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
     return `$${n.toFixed(2)}`;
@@ -159,7 +159,7 @@ export default function Home() {
         <div style={{ borderBottom: "1px solid #1A2A1C", padding: "14px 32px", background: "#0A0E0B", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
           <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>MNT PRICE</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "—"}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", color: "#EEF5F0", fontWeight: 700 }}>${liveData?.mntPrice?.toFixed(4) ?? "â€”"}</div>
           </div>
           <div style={{ background: "#0F1611", border: "1px solid #1A2A1C", padding: "14px 16px" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "#4A6650", marginBottom: "8px" }}>MARKET CAP</div>
