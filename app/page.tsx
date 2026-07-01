@@ -154,7 +154,7 @@ export default function Home() {
 
   function shareResponse(content: string) {
     const snippet = content.slice(0, 200).trim();
-    const text = `${snippet} — via Mantle Research Agent mantlescout.vercel.app @Mantle_Official #Mantle #RWA`;
+    const text = `${snippet} - via Mantle Research Agent mantlescout.vercel.app @Mantle_Official #Mantle #RWA`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
