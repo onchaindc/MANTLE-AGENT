@@ -450,9 +450,9 @@ export default function Home() {
           </aside>
         )}
 
-        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: "32px" }}>
+        <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? "20px 32px 16px" : "32px", display: "flex", flexDirection: "column", height: messages.length === 0 ? (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)") : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
           {messages.length === 0 && (
-            <div style={{ minHeight: "calc(100vh - 270px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 0 24px", textAlign: "center" }}>
+            <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 0", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "var(--text)" }}>
                 <div style={{ width: "30px", height: "30px", overflow: "hidden" }}>
                   <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
@@ -511,7 +511,7 @@ export default function Home() {
             </div>
           )}
 
-          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: "24px" }}>
+          <div style={{ position: messages.length > 0 ? "sticky" : "static", bottom: 0, background: "var(--bg)", borderTop: messages.length > 0 ? "1px solid var(--line)" : "none", paddingTop: messages.length > 0 ? "16px" : "0", paddingBottom: messages.length > 0 ? "24px" : "8px", marginTop: messages.length === 0 ? "auto" : "0" }}>
             <div style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: "18px", padding: "10px", overflow: "hidden" }}>
               <input
                 value={input}
@@ -532,7 +532,7 @@ export default function Home() {
               </div>
             </div>
             {messages.length === 0 && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginTop: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap", marginTop: "14px", paddingBottom: "2px" }}>
                 {QUICK_ACTIONS.map((action) => (
                   <button
                     key={action.label}
