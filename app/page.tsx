@@ -453,10 +453,7 @@ export default function Home() {
         <div style={{ flex: 1, maxWidth: "980px", width: "100%", margin: "0 auto", padding: messages.length === 0 ? "20px 32px 16px" : "32px", display: "flex", flexDirection: "column", height: messages.length === 0 ? (showLiveStats ? "calc(100vh - 168px)" : "calc(100vh - 57px)") : "auto", overflow: messages.length === 0 ? "hidden" : "visible" }}>
           {messages.length === 0 && (
             <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 0", textAlign: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", color: "var(--text)" }}>
-                <div style={{ width: "30px", height: "30px", overflow: "hidden" }}>
-                  <img src="/mantle-logo.png" alt="Mantle Scout logo" style={logoImageStyle} />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)" }}>
                 <h1 style={{ fontSize: "44px", lineHeight: 1.12, color: "var(--text)", fontWeight: 400, letterSpacing: 0, margin: 0 }}>
                   What should we scout on Mantle?
                 </h1>
